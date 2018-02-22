@@ -2,7 +2,7 @@
 
 ## Status: beta
 
-Super quick project generator for web projects. This is includes webpack configs and basic loaders.
+Super quick project generator for web projects. This includes webpack configs and basic loaders.
 
 ## Quickstart
 ```sh
