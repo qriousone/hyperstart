@@ -1,6 +1,6 @@
 {
   "name": "hyperstart",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Project Generator",
   "main": "index.js",
   "scripts": {
