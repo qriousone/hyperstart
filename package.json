@@ -18,5 +18,13 @@
   "homepage": "https://github.com/qriousone/hyperstart#readme",
   "bin": {
     "hyperstart": "./index.js"
+  },
+  "dependencies": {
+    "chalk": "^2.3.1",
+    "co": "^4.6.0",
+    "co-prompt": "^1.0.0",
+    "commander": "^2.14.1",
+    "fs-extra": "^5.0.0",
+    "jsonfile": "^4.0.0"
   }
 }
