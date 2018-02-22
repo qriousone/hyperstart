@@ -1,9 +1,10 @@
 #!/usr/bin/env node --harmony
 // node
-const os = require('os');
-const exec = require('child_process').exec;
+const { userInfo } = require('os');
+const { exec } = require('child_process');
 // npm
 const co = require('co');
+const ora = require('ora');
 const fs = require('fs-extra');
 const chalk = require('chalk');
 const prompt = require('co-prompt');
@@ -17,58 +18,47 @@ const TEXT_COLORS = {
   pink: '#FF2E88',
   green: '#50E3C2'
 };
-let projectName;
-const cancel = () => {
-  process.exit(1);
-};
+const cancel = () => process.exit(1);
 const chalked = (color, str) => chalk.hex(color).bold(str);
 const chalkedConsole = color => (chalkedStr, str = '') => {
   console.log(chalked(color, chalkedStr) + str);
 };
-const green = chalkedConsole(TEXT_COLORS.green);
-const pink = chalkedConsole(TEXT_COLORS.pink);
-
+const greenLog = chalkedConsole(TEXT_COLORS.green);
+const pinkLog = chalkedConsole(TEXT_COLORS.pink);
 const adjustPackageJson = (name, author, description) => {
-  const packageJsonFile = CURR_DIR + '/package.json';
-  const newPackageJsonProp = {
+  const jsonFile = CURR_DIR + '/package.json';
+  const newJsonObj = {
     name,
     author,
     description
   };
-  jsonfile.readFile(packageJsonFile, function(err, obj) {
-    const newPackageJson = Object.assign({}, obj, newPackageJsonProp);
-    jsonfile.writeFile(
-      packageJsonFile,
-      newPackageJson,
-      {
-        spaces: 2,
-        EOL: '\r\n'
-      },
-      function(err) {
-        if (err) {
-          console.error(err);
-        }
+  const jsonfileOpts = {
+    spaces: 2,
+    EOL: '\r\n'
+  };
+  jsonfile.readFile(jsonFile, function(err, obj) {
+    const newPackageJson = Object.assign({}, obj, newJsonObj);
+    jsonfile.writeFile(jsonFile, newPackageJson, jsonfileOpts, err => {
+      if (err) {
+        console.error(err);
       }
-    );
+    });
   });
 };
-
 const createProject = (projectName, author, description) => {
-  green(`Hello ${author}!`);
-  pink('Creating project...');
+  greenLog(`Hello ${author}!`);
   fs
     .copy(WEBPACK_DIR, CURR_DIR)
     .then(() => {
-      green('Directories created.');
       adjustPackageJson(projectName, author, description);
-      pink('Installing node modules...');
+      const spinner = ora('Creating project...').start();
       exec('npm install', (error, stdout, stderr) => {
+        spinner.stop();
         console.log('stdout: ' + stdout);
-        pink('stderr:');
         stderr.split('\n').forEach(value => {
-          pink(value);
+          pinkLog(value);
         });
-        green('Node modules installed.');
+        greenLog('Project created!');
         cancel();
         if (error !== null) {
           console.log('exec error: ' + error);
@@ -77,34 +67,45 @@ const createProject = (projectName, author, description) => {
     })
     .catch(err => console.error(err));
 };
-
-program.arguments('<projectname>').action(projectname => {
-  projectName = projectname;
-});
-
-program.parse(process.argv);
-
-if (typeof projectName === 'undefined') {
-  pink("Project's name is required");
-  cancel();
-} else {
-  green('Project Name: ', projectName);
+const isProjectName = name => {
+  if (typeof name === 'undefined') {
+    pinkLog("Project's name is required");
+    cancel();
+  }
+};
+const getProjectName = () => {
+  let name;
+  program
+    .arguments('<projectname>')
+    .action(projectname => {
+      name = projectname;
+    })
+    .parse(process.argv);
+  isProjectName(name);
+  greenLog('Project Name: ', name);
+  return name;
+};
+const question = str => chalked(TEXT_COLORS.pink, str);
+const setupQuestions = projectName => {
+  const sameDir = CURR_DIR === __dirname;
+  const { username } = userInfo();
   co(function*() {
-    let author = yield prompt(
-      chalked(TEXT_COLORS.pink, `author: (${os.userInfo().username}) `)
-    );
+    let author = yield prompt(question(`author: (${username}) `));
     if (!author) {
-      author = os.userInfo().username;
+      author = username;
     }
-    const description = yield prompt(
-      chalked(TEXT_COLORS.pink, `description: `)
-    );
-    const git = yield prompt(chalked(TEXT_COLORS.pink, `git repository: `));
-    if (CURR_DIR !== __dirname) {
-      createProject(projectName, author, description);
-    } else {
-      pink('Can not create project inside hyperstart module.');
+    const description = yield prompt(question('description: '));
+    const git = yield prompt(question('git repository: '));
+    if (sameDir) {
+      pinkLog('Can not create project inside hyperstart module.');
       cancel();
+    } else {
+      createProject(projectName, author, description);
     }
   });
-}
+};
+const init = () => {
+  const projectName = getProjectName();
+  setupQuestions(projectName);
+};
+init();
